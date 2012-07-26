@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Local Metrics</title>
+<style>
+  @import url(http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:400,700);
+  @import url(stylesheets/style.css);
+
+  #example1 { min-height: 155px; }
+  #example2a { min-height: 153px; }
+  #example2b { min-height: 255px; }
+
+  .horizon .title,
+  .horizon .value {
+    text-shadow: black 1px 1px;
+    color: white;
+    }
+</style>
+
+
+<div id="body">
+
+  <div id="dashboard-axis"></div>
+
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<script src="javascripts/d3.v2.js"></script>
+<script src="javascripts/cubism.v1.js"></script>
+<script src="javascripts/highlight.min.js"></script>
+
+<script>
+  function add_axis(context) {
+    //$("body").append("<div class='dashboard_axis'>");
+
+    d3.select("#dashboard-axis").call(function(div) {
+      div.append("div")
+          .attr("class", "axis")
+          .call(context.axis().orient("top"));
+
+
+      div.append("div")
+          .attr("class", "rule")
+          .call(context.rule());
+    });
+  }
+
+  var context = cubism.context()
+                      //.serverDelay(10 * 1000) // allow 10 seconds of collection lag
+                      .serverDelay(0)
+                      .clientDelay(0)
+                      .step(1e4) // 1e4 - 10-second, 6e4 - 1-minute, 3e5 - 5-minute, 36e5 - 1-hour, 864e5 - 1-day
+                      .size(960); // fetch 960 values
+
+  var cube = context.cube("http://localhost:1081");
+  var graph_colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"];
+
+  add_axis(context);
+
+  var hosts = { 
+                proxy: ['bob-burbachs-macbook-pro.local']//,
+                //app:   ['bob-burbachs-macbook-pro.local'],
+                //worker: ['bob-burbachs-macbook-pro.local'],
+                //database: ['bob-burbachs-macbook-pro.local']
+              }
+
+  $.each(hosts, function(group, servers) {
+    $("body").append( $("<h2>").addClass(group + "header").html(group) );
+    $.each(servers, function(index, fqdn) {
+      var memory_inactive = cube.metric("max(collectd(memory).eq(host,'" + fqdn + "').eq(type, 'inactive'))"),
+          memory_active   = cube.metric("max(collectd(memory).eq(host,'" + fqdn + "').eq(type, 'active'))"),
+          memory_wired    = cube.metric("max(collectd(memory).eq(host,'" + fqdn + "').eq(type, 'wired'))"),
+          memory_free     = cube.metric("max(collectd(memory).eq(host,'" + fqdn + "').eq(type, 'free'))"),
+          memory_avail    = memory_inactive.add(memory_free),
+          load_shortterm = cube.metric("max(collectd(load.shortterm).eq(host,'" + fqdn + "'))"),
+          load_midterm = cube.metric("max(collectd(load.midterm).eq(host,'" + fqdn + "'))"),
+          load_longterm = cube.metric("max(collectd(load.longterm).eq(host,'" + fqdn + "'))"),
+          disk_space_used = cube.metric("median(collectd(df.df_complex).eq(host,'" + fqdn + "').eq(plugin, 'disk0s2').eq(type, 'used'))"),
+          disk_space_free = cube.metric("median(collectd(df.df_complex).eq(host,'" + fqdn + "').eq(plugin, 'disk0s2').eq(type, 'free'))"),
+          cpu = cube.metric("median(collectd(cpu).eq(host,'" + fqdn + "'))"),
+          swap_free   = cube.metric("median(collectd(swap).eq(host,'" + fqdn + "').eq(type, 'free'))"),
+          swap_cached = cube.metric("median(collectd(swap).eq(host,'" + fqdn + "').eq(type, 'cached'))"),
+          swap_used   = cube.metric("median(collectd(swap).eq(host,'" + fqdn + "').eq(type, 'used'))"),
+          network_rx  = cube.metric("median(collectd(interface.if_octets.rx).eq(host,'" + fqdn + "').eq(plugin, 'lo0'))"),
+          network_tx  = cube.metric("median(collectd(interface.if_octets.tx).eq(host,'" + fqdn + "').eq(plugin, 'lo0'))")
+          varnish_cache_hit     = cube.metric("median(collectd(varnish.cache_result).eq(host,'" + fqdn + "').eq(plugin, 'default-cache').eq(type, 'hit'))"),
+          varnish_cache_miss    = cube.metric("median(collectd(varnish.cache_result).eq(host,'" + fqdn + "').eq(plugin, 'default-cache').eq(type, 'miss'))"),
+          varnish_cache_hitpass = cube.metric("median(collectd(varnish.cache_result).eq(host,'" + fqdn + "').eq(plugin, 'default-cache').eq(type, 'hitpass'))"),
+          varnish_esi_parsed = cube.metric("max(collectd(varnish.total_operations).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-esi').eq(type,'parsed'))"),
+          varnish_esi_errors = cube.metric("max(collectd(varnish.total_operations).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-esi').eq(type,'errors'))"),
+          varnish_connections_accepted = cube.metric("max(collectd(varnish.connections).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-connections').eq(type,'accepted'))"),
+          varnish_connections_dropped  = cube.metric("max(collectd(varnish.connections).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-connections').eq(type,'dropped'))"),
+          varnish_connections_recieved = cube.metric("max(collectd(varnish.connections).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-connections').eq(type,'recieved'))"),
+
+          varnish_backend_success       = cube.metric("max(collectd(varnish.connections).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-backend').eq(type,'success'))"),
+          varnish_backend_not_attempted = cube.metric("max(collectd(varnish.connections).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-backend').eq(type,'not-attempted'))"),
+          varnish_backend_too_many      = cube.metric("max(collectd(varnish.connections).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-backend').eq(type,'too-many'))"),
+          varnish_backend_failure       = cube.metric("max(collectd(varnish.connections).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-backend').eq(type,'failures'))"),
+          varnish_backend_reuses        = cube.metric("max(collectd(varnish.connections).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-backend').eq(type,'reuses'))"),
+          varnish_backend_was_closed    = cube.metric("max(collectd(varnish.connections).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-backend').eq(type,'was-closed'))"),
+          varnish_backend_recycled      = cube.metric("max(collectd(varnish.connections).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-backend').eq(type,'recycled'))"),
+          varnish_backend_unused        = cube.metric("max(collectd(varnish.connections).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-backend').eq(type,'unused'))"),
+
+          varnish_shm_records    = cube.metric("max(collectd(varnish.total_operations).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-shm').eq(type,'records'))"),
+          varnish_shm_writes     = cube.metric("max(collectd(varnish.total_operations).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-shm').eq(type,'writes'))"),
+          varnish_shm_flushes    = cube.metric("max(collectd(varnish.total_operations).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-shm').eq(type,'flushes'))"),
+          varnish_shm_contention = cube.metric("max(collectd(varnish.total_operations).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-shm').eq(type,'contention'))"),
+          varnish_shm_cycles     = cube.metric("max(collectd(varnish.total_operations).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'default-shm').eq(type,'cycles'))"),
+          
+          mysql_rx = cube.metric("max(collectd(mysql.mysql_octets.rx).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development'))"),
+          mysql_tx = cube.metric("max(collectd(mysql.mysql_octets.tx).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development'))"),
+          mysql_threads_cached    = cube.metric("max(collectd(mysql.threads).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'cached'))"),
+          mysql_threads_created   = cube.metric("max(collectd(mysql.total_threads).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'created'))"),
+          mysql_threads_connected = cube.metric("max(collectd(mysql.threads).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'connected'))"),
+          mysql_threads_running   = cube.metric("max(collectd(mysql.threads).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'running'))"),
+          mysql_locks_waiting   = cube.metric("max(collectd(mysql.mysql_locks).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'waited'))"),
+          mysql_locks_immediate = cube.metric("max(collectd(mysql.mysql_locks).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'immediate'))"),
+
+          mysql_handler_write         = cube.metric("max(collectd(mysql.mysql_handler).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'write'))"),
+          mysql_handler_update        = cube.metric("max(collectd(mysql.mysql_handler).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'update'))"),
+          mysql_handler_rollback      = cube.metric("max(collectd(mysql.mysql_handler).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'rollback'))"),
+          mysql_handler_read_rnd      = cube.metric("max(collectd(mysql.mysql_handler).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'read_rnd'))"),
+          mysql_handler_read_rnd_next = cube.metric("max(collectd(mysql.mysql_handler).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'read_rnd_next'))"),
+          mysql_handler_read_first    = cube.metric("max(collectd(mysql.mysql_handler).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'read_first'))"),
+          mysql_handler_read_key      = cube.metric("max(collectd(mysql.mysql_handler).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'read_key'))"),
+          mysql_handler_read_next     = cube.metric("max(collectd(mysql.mysql_handler).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'read_next'))"),
+          mysql_handler_read_prev     = cube.metric("max(collectd(mysql.mysql_handler).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'read_prev'))"),
+
+          mysql_command_begin         = cube.metric("max(collectd(mysql.mysql_commands).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'begin'))"),
+          mysql_command_commit        = cube.metric("max(collectd(mysql.mysql_commands).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'commit'))"),
+          mysql_command_delete        = cube.metric("max(collectd(mysql.mysql_commands).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'delete'))"),
+          mysql_command_flush         = cube.metric("max(collectd(mysql.mysql_commands).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'flush'))"),
+          mysql_command_insert        = cube.metric("max(collectd(mysql.mysql_commands).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'insert'))"),
+          mysql_command_rollback      = cube.metric("max(collectd(mysql.mysql_commands).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'rollback'))"),
+          mysql_command_select        = cube.metric("max(collectd(mysql.mysql_commands).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'select'))"),
+          mysql_command_update        = cube.metric("max(collectd(mysql.mysql_commands).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'update'))"),
+          mysql_command_lock_tables   = cube.metric("max(collectd(mysql.mysql_commands).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'lock_tables'))"),
+          mysql_command_unlock_tables = cube.metric("max(collectd(mysql.mysql_commands).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'unlock_tables'))"),
+          mysql_command_alter_table   = cube.metric("max(collectd(mysql.mysql_commands).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'alter_table'))"),
+          mysql_command_show_fields   = cube.metric("max(collectd(mysql.mysql_commands).eq(host,'bob-burbachs-macbook-pro.local').eq(plugin,'fr2_development').eq(type,'show_fields'))");
+
+
+      fqdn_id = fqdn.replace('.', '-');
+
+      var metrics = [ [memory_wired,    fqdn_id + "-memory-wired",    group, "Memory Wired"],
+                      [memory_active,   fqdn_id + "-memory-active",   group, "Memory Active"],
+                      [memory_inactive, fqdn_id + "-memory-inactive", group, "Memory Inctive"],
+                      [memory_free,     fqdn_id + "-memory-free",     group, "Memory Free"],
+                      [memory_avail,    fqdn_id + "-memory-avail",    group, "Memory Avail"],
+                      [load_shortterm,  fqdn_id + "-load-shortterm",  group, "Load 1 min."], 
+                      [load_midterm,    fqdn_id + "-load-midterm",    group, "Load 5 min."],
+                      [load_longterm,   fqdn_id + "-load-longterm",   group, "Load 15 min."],
+                      [disk_space_used, fqdn_id + "-disk-space_used", group, "Disk Space Used"],
+                      [disk_space_free, fqdn_id + "-disk-space_free", group, "Disk Space Free"],
+                      [cpu,             fqdn_id + "-cpu",             group, "CPU"],
+                      [swap_free,       fqdn_id + "-swap-free",       group, "Swap Free"],
+                      [swap_cached,     fqdn_id + "-swap-cached",     group, "Swap Cached"],
+                      [swap_used,       fqdn_id + "-swap-used",       group, "Swap Used"],
+                      [network_rx,      fqdn_id + "-network-rx",      group, "Network Rx"],
+                      [network_tx,      fqdn_id + "-network-tx",      group, "Network Tx"],
+                      [varnish_cache_hit,     fqdn_id + "-varnish-cache-hit",     group, "Varnish Cache Hit"],
+                      [varnish_cache_miss,    fqdn_id + "-varnish-cache-miss",    group, "Varnish Cache Miss"],
+                      [varnish_cache_hitpass, fqdn_id + "-varnish-cache-hitpass", group, "Varnish Cache HitPass"],
+                      [varnish_esi_parsed,    fqdn_id + "-varnish-esi-parsed",    group, "Varnish ESI Parsed"],
+                      [varnish_esi_errors,    fqdn_id + "-varnish-esi-errors",    group, "Varnish ESI Errors"],
+                      [varnish_connections_accepted, fqdn_id + "-varnish-connections-accepted", group, "Varnish Connections Accepted"],
+                      [varnish_connections_dropped,  fqdn_id + "-varnish-connections-dropped",  group, "Varnish Connections Dropped"],
+                      [varnish_connections_recieved, fqdn_id + "-varnish-connections-recieved", group, "Varnish Connections Recieved"],
+                      [varnish_backend_success,       fqdn_id + "-varnish-backend-success",       group, "Varnish Backend Success"],
+                      [varnish_backend_not_attempted, fqdn_id + "-varnish-backend-not-attempted", group, "Varnish Backend Not Attempted"],
+                      [varnish_backend_too_many,      fqdn_id + "-varnish-backend-too-many",      group, "Varnish Backend Too Many"],
+                      [varnish_backend_failure,       fqdn_id + "-varnish-backend-failure",       group, "Varnish Backend Failure"],
+                      [varnish_backend_reuses,        fqdn_id + "-varnish-backend-reuses",        group, "Varnish Backend Reuses"],
+                      [varnish_backend_was_closed,    fqdn_id + "-varnish-backend-was-closed",    group, "Varnish Backend Was Closed"],
+                      [varnish_backend_recycled,      fqdn_id + "-varnish-backend-recycled",      group, "Varnish Backend Recycled"],
+                      [varnish_backend_unused,        fqdn_id + "-varnish-backend-unused",        group, "Varnish Backend Unused"],
+                      [varnish_shm_records,    fqdn_id + "-varnish-shm-records",    group, "Varnish SHM Records"],
+                      [varnish_shm_writes,     fqdn_id + "-varnish-shm-writes",     group, "Varnish SHM Writes"],
+                      [varnish_shm_flushes,    fqdn_id + "-varnish-shm-flushes",    group, "Varnish SHM Flushes"],
+                      [varnish_shm_contention, fqdn_id + "-varnish-shm-contention", group, "Varnish SHM Contention"],
+                      [varnish_shm_cycles,     fqdn_id + "-varnish-shm-cycles",     group, "Varnish SHM Cycles"],
+                      [mysql_rx, fqdn_id + "-mysql-rx", group, "MySQL Rx"],
+                      [mysql_tx, fqdn_id + "-mysql-rx", group, "MySQL Tx"],
+                      [mysql_threads_cached,    fqdn_id + "-mysql-threads-cached",    group, "MySQL Threads Cached"],
+                      [mysql_threads_created,   fqdn_id + "-mysql-threads-created",   group, "MySQL Threads Created"],
+                      [mysql_threads_connected, fqdn_id + "-mysql-threads-connected", group, "MySQL Threads Connected"],
+                      [mysql_threads_running,   fqdn_id + "-mysql-threads-running",   group, "MySQL Threads Running"],
+                      [mysql_locks_waiting,   fqdn_id + "-mysql-locks-waiting",   group, "MySQL Locks Waiting"],
+                      [mysql_locks_immediate, fqdn_id + "-mysql-locks-immediate", group, "MySQL Locks Immediate"],
+                      [mysql_handler_write,         fqdn_id + "-mysql-handler-write",         group, "MySQL Handler Write"],
+                      [mysql_handler_update,        fqdn_id + "-mysql-handler-update",        group, "MySQL Handler Update"],
+                      [mysql_handler_rollback,      fqdn_id + "-mysql-handler-rollback",      group, "MySQL Handler Rollback"],
+                      [mysql_handler_read_rnd,      fqdn_id + "-mysql-handler-read-rnd",      group, "MySQL Handler Read Rnd"],
+                      [mysql_handler_read_rnd_next, fqdn_id + "-mysql-handler-read-rnd-next", group, "MySQL Handler Read Rnd Next"],
+                      [mysql_handler_read_first,    fqdn_id + "-mysql-handler-read-first",    group, "MySQL Handler Read First"],
+                      [mysql_handler_read_key,      fqdn_id + "-mysql-handler-read-key",      group, "MySQL Handler Read Key"],
+                      [mysql_handler_read_next,     fqdn_id + "-mysql-handler-read-next",     group, "MySQL Handler Next"],
+                      [mysql_handler_read_prev,     fqdn_id + "-mysql-handler-read-prev",     group, "MySQL Handler Prev"],
+                      [mysql_command_begin,         fqdn_id + "-mysql-command-begin",         group, "MySQL Command Begin"],
+                      [mysql_command_commit,        fqdn_id + "-mysql-command-commit",        group, "MySQL Command Commit"],
+                      [mysql_command_delete,        fqdn_id + "-mysql-command-delete",        group, "MySQL Command Delete"],
+                      [mysql_command_flush,         fqdn_id + "-mysql-command-flush",         group, "MySQL Command Flush"],
+                      [mysql_command_insert,        fqdn_id + "-mysql-command-insert",        group, "MySQL Command Insert"],
+                      [mysql_command_rollback,      fqdn_id + "-mysql-command-rollback",      group, "MySQL Command Rollback"],
+                      [mysql_command_select,        fqdn_id + "-mysql-command-select",        group, "MySQL Command Select"],
+                      [mysql_command_update,        fqdn_id + "-mysql-command-update",        group, "MySQL Command Update"],
+                      [mysql_command_lock_tables,   fqdn_id + "-mysql-command-lock-tables",   group, "MySQL Command Lock Tables"],
+                      [mysql_command_unlock_tables, fqdn_id + "-mysql-command-unlock-tables", group, "MySQL Command Unlock Tables"],
+                      [mysql_command_alter_table,   fqdn_id + "-mysql-command-alter-table",   group, "MySQL Command Alter Table"],
+                      [mysql_command_show_fields,   fqdn_id + "-mysql-command-show-fields",   group, "MySQL Command Show Fields"]
+                    ];
+
+      $.each(metrics, function(index, metric) {
+        var data = metric[0],
+            id = metric[1],
+            group = metric[2],
+            label = metric[3];
+
+        $("body").append("<div id='" + id + "' class='" + group + "' >");
+
+        d3.select("#" + id).call(function(div) {
+          div.datum(data);
+
+
+          div.append("div")
+             .attr("class", "horizon")
+             .call(context.horizon()
+             .height(30)
+             .colors(graph_colors)
+             .title(label));
+
+        });
+      });
+
+    });
+  });
+
+  // On mousemove, reposition the chart values to match the rule.
+  context.on("focus", function(i) {
+    d3.selectAll(".value").style("right", i == null ? null : context.size() - i + "px");
+  });
+</script>
+
+
