@@ -1,0 +1,108 @@
+metrics_defaults: &defaults
+  use_host: true
+  plugin:
+  type:
+  description:
+  expression:
+
+servers:
+  all:
+    metrics: [memory_inactive, memory_wired, memory_active, memory_free]
+  proxy:
+    metrics: [load_shortterm, load_midterm, load_longterm]
+    hosts: ['bob-burbachs-macbook-pro.local']
+
+metrics:
+  # the following would create
+  # cube.metric("max(collectd(memory).eq(host,'your.servers.fqdn').eq(type, 'inactive'))")
+  memory_inactive:
+    <<: *metrics_defaults
+    id: memory-inactive
+    label: Memory Inactive
+    query: collectd(memory)
+    expression: max
+    type: inactive
+    description: This is the amount that has recently been used but is no longer required. It may have been used by a recently quit process, or by an active one that no longer needs it, and is not required for use. This RAM is essentially free RAM, with the exception that OS X has kept track of what has recently been loaded into it.
+  memory_wired:
+    <<: *metrics_defaults
+    id: memory-wired
+    label: Memory Wired
+    query: collectd(memory)
+    expression: max
+    type: wired
+    description: This is the amount that must be kept active for the system to run. This RAM cannot be written to virtual memory on the hard disk.
+  memory_active:
+    <<: *metrics_defaults
+    id: memory-active
+    label: Memory Active
+    query: collectd(memory)
+    expression: max
+    type: active
+    description: This is the current amount of memory besides wired RAM that is being used by system and user processes.
+  memory_free:
+    <<: *metrics_defaults
+    id: memory-free
+    label: Memory Free
+    query: collectd(memory)
+    expression: max
+    type: free
+    description: This is the amount that has not been recently used by an application or system process.
+
+  load_shortterm:
+    id: load-shortterm
+    <<: *metrics_defaults
+    label: Load 1 min.
+    query: collectd(load.shortterm)
+    expression: max
+  load_midterm:
+    id: load-midterm
+    <<: *metrics_defaults
+    label: Load 5 min.
+    query: collectd(load.midterm)
+    expression: max
+  load_longterm:
+    id: load-longterm
+    <<: *metrics_defaults
+    label: Load 15 min.
+    query: collectd(load.longterm)
+    expression: max
+
+  disk_space_used:
+    <<: *metrics_defaults
+    id: disk-space-used
+    label: Disk Space Used
+    query: collectd(df.df_complex)
+    expression: median
+    type: used
+    plugin: disk0s2
+  disk_space_free:
+    <<: *metrics_defaults
+    id: disk-space-free
+    label: Disk Space Used
+    query: collectd(df.df_complex)
+    expression: median
+    type: free
+    plugin: disk0s2
+
+  swap_free:
+    <<: *metrics_defaults
+    id: swap-free
+    label: Swap Free
+    query: collectd(swap)
+    expression: median
+    type: free
+  swap_cached:
+    <<: *metrics_defaults
+    id: swap-cached
+    label: Swap Cached
+    query: collectd(swap)
+    expression: median
+    type: cached  
+  swap_used:
+    <<: *metrics_defaults
+    id: swap-used
+    label: Swap Used
+    query: collectd(swap)
+    expression: median
+    type: used
+

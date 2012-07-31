@@ -1,0 +1,8 @@
+<h2><%= group_name %></h2>
+
+<% hosts.each do |fqdn| %>
+  <h3><%= fqdn %></h3>
+  <% group_metrics.each do |group_metric| %>
+    <div id="<%= fqdn.gsub('.', '-') %>-<%= group_metric.gsub('_', '-') %>" data-server-group="<%=group_name%>"></div>
+  <% end %>
+<% end %>

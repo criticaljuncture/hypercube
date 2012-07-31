@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Local Metrics</title>
+<style>
+  @import url(http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:400,700);
+  @import url(stylesheets/style.css);
+
+  #example1 { min-height: 155px; }
+  #example2a { min-height: 153px; }
+  #example2b { min-height: 255px; }
+
+  .horizon .title,
+  .horizon .value {
+    text-shadow: black 1px 1px;
+    color: white;
+    }
+</style>
+
+
+<div id="body">
+  <div id="dashboard-axis"></div>
+
+  <% server_html.each do |html| %>
+    <%= html %>
+  <% end %>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<script src="javascripts/d3.v2.js"></script>
+<script src="javascripts/cubism.v1.js"></script>
+<script src="javascripts/highlight.min.js"></script>
+
+<%= cubism %>
+<%= cubism_servers %>
+

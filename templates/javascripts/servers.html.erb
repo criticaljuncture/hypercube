@@ -1,0 +1,25 @@
+<script>
+  var hosts = <%= server_hosts.to_json %>;
+
+  var metrics = <%= metric_queries.to_json %>;
+
+  $.each(metrics, function(index, metric) {
+    var data = cube.metric( metric[0] ),
+        id = metric[1],
+        group = metric[2],
+        label = metric[3];
+
+    d3.select("#" + id).call(function(div) {
+      div.datum(data);
+
+
+      div.append("div")
+         .attr("class", "horizon")
+         .call(context.horizon()
+                      .height(30)
+                      .colors(graph_colors)
+                      .title(label));
+
+    });
+  });
+</script>
