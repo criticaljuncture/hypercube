@@ -1,15 +1,11 @@
 metrics_defaults: &defaults
   use_host: true
-  plugin:
-  type:
-  description:
-  expression:
-
+  
 servers:
   all:
-    metrics: [memory_inactive, memory_wired, memory_active, memory_free]
+    metrics: [memory_inactive, memory_wired, memory_active, memory_free, load_shortterm, load_midterm, load_longterm]
   proxy:
-    metrics: [load_shortterm, load_midterm, load_longterm]
+    metrics: [varnish_cache_hit, varnish_cache_miss, varnish_cache_hitpass]
     hosts: ['bob-burbachs-macbook-pro.local']
 
 metrics:
@@ -21,7 +17,8 @@ metrics:
     label: Memory Inactive
     query: collectd(memory)
     expression: max
-    type: inactive
+    params:
+      type: inactive
     description: This is the amount that has recently been used but is no longer required. It may have been used by a recently quit process, or by an active one that no longer needs it, and is not required for use. This RAM is essentially free RAM, with the exception that OS X has kept track of what has recently been loaded into it.
   memory_wired:
     <<: *metrics_defaults
@@ -29,7 +26,8 @@ metrics:
     label: Memory Wired
     query: collectd(memory)
     expression: max
-    type: wired
+    params:
+      type: wired
     description: This is the amount that must be kept active for the system to run. This RAM cannot be written to virtual memory on the hard disk.
   memory_active:
     <<: *metrics_defaults
@@ -37,7 +35,8 @@ metrics:
     label: Memory Active
     query: collectd(memory)
     expression: max
-    type: active
+    params:
+      type: active
     description: This is the current amount of memory besides wired RAM that is being used by system and user processes.
   memory_free:
     <<: *metrics_defaults
@@ -45,24 +44,25 @@ metrics:
     label: Memory Free
     query: collectd(memory)
     expression: max
-    type: free
+    params:
+      type: free
     description: This is the amount that has not been recently used by an application or system process.
 
   load_shortterm:
-    id: load-shortterm
     <<: *metrics_defaults
+    id: load-shortterm
     label: Load 1 min.
     query: collectd(load.shortterm)
     expression: max
   load_midterm:
-    id: load-midterm
     <<: *metrics_defaults
+    id: load-midterm
     label: Load 5 min.
     query: collectd(load.midterm)
     expression: max
   load_longterm:
-    id: load-longterm
     <<: *metrics_defaults
+    id: load-longterm
     label: Load 15 min.
     query: collectd(load.longterm)
     expression: max
@@ -73,16 +73,18 @@ metrics:
     label: Disk Space Used
     query: collectd(df.df_complex)
     expression: median
-    type: used
-    plugin: disk0s2
+    params:
+      type: used
+      plugin: disk0s2
   disk_space_free:
     <<: *metrics_defaults
     id: disk-space-free
     label: Disk Space Used
     query: collectd(df.df_complex)
     expression: median
-    type: free
-    plugin: disk0s2
+    params:
+      type: free
+      plugin: disk0s2
 
   swap_free:
     <<: *metrics_defaults
@@ -90,19 +92,548 @@ metrics:
     label: Swap Free
     query: collectd(swap)
     expression: median
-    type: free
+    params:
+      type: free
   swap_cached:
     <<: *metrics_defaults
     id: swap-cached
     label: Swap Cached
     query: collectd(swap)
     expression: median
-    type: cached  
+    params:
+      type: cached  
   swap_used:
     <<: *metrics_defaults
     id: swap-used
     label: Swap Used
     query: collectd(swap)
     expression: median
-    type: used
+    params:
+     type: used
+
+  network_rx:
+    <<: *metrics_defaults
+    id: network-rx
+    label: Network Rx
+    query: collectd(interface.if_octets.rx)
+    expression: median
+    params:
+      plugin: lo0
+    description: Bytes/s transmitted
+  network_tx:
+    <<: *metrics_defaults
+    id: network-tx
+    label: Network Tx
+    query: collectd(interface.if_octets.tx)
+    expression: median
+    params:
+      plugin: lo0
+    description: Bytes/s received
+
+  varnish_cache_hit:
+    <<: *metrics_defaults
+    id: varnish-cache-hit
+    label: Varnish Cache Hit
+    query: collectd(varnish.cache_result)
+    expression: median
+    params:
+      plugin: default-cache
+      type: hit
+    description:
+  varnish_cache_miss:
+    <<: *metrics_defaults
+    id: varnish-cache-miss
+    label: Varnish Cache Miss
+    query: collectd(varnish.cache_result)
+    expression: median
+    params:
+      plugin: default-cache
+      type: miss
+    description:
+  varnish_cache_hitpass:
+    <<: *metrics_defaults
+    id: varnish-cache-hitpass
+    label: Varnish Cache Hitpass
+    query: collectd(varnish.cache_result)
+    expression: median
+    params:
+      plugin: default-cache
+      type: hitpass
+    description:
+
+  varnish_esi_parsed:
+    <<: *metrics_defaults
+    id: varnish-esi-parsed
+    label: Varnish ESI Parsed
+    query: collectd(varnish.total_operations)
+    expression: max
+    params:
+      plugin: default-esi
+      type: parsed
+    description:
+  varnish_esi_errors:
+    <<: *metrics_defaults
+    id: varnish-esi-errors
+    label: Varnish ESI Errors
+    query: collectd(varnish.total_operations)
+    expression: max
+    params:
+      plugin: default-esi
+      type: errors
+    description:
+  
+  varnish_connections_accepted:
+    <<: *metrics_defaults
+    id: varnish-connections-accepted
+    label: Varnish Connections Accepted
+    query: collectd(varnish.connections)
+    expression: max
+    params:
+      plugin: default-connections
+      type: accepted
+    description:
+  varnish_connections_dropped:
+    <<: *metrics_defaults
+    id: varnish-connections-dropped
+    label: Varnish Connections Dropped
+    query: collectd(varnish.connections)
+    expression: max
+    params:
+      plugin: default-connections
+      type: dropped
+    description:
+  varnish_connections_recieved:
+    <<: *metrics_defaults
+    id: varnish-connections-recieved
+    label: Varnish Connections Received
+    query: collectd(varnish.connections)
+    expression: max
+    params:
+      plugin: default-connections
+      type: received
+    description:
+
+  varnish_backend_success:
+    <<: *metrics_defaults
+    id: varnish-backend-success
+    label: Varnish Backend Success
+    query: collectd(varnish.connections)
+    expression: max
+    params:
+      plugin: default-backend
+      type: success
+    description:
+  varnish_backend_not_attempted:
+    <<: *metrics_defaults
+    id: varnish-backend-not-attempted
+    label: Varnish Backend Not Attempted
+    query: collectd(varnish.connections)
+    expression: max
+    params:
+      plugin: default-backend
+      type: not-attempted
+    description:
+  varnish_backend_too_many:
+    <<: *metrics_defaults
+    id: varnish-backend-too-many
+    label: Varnish Backend Too Many
+    query: collectd(varnish.connections)
+    expression: max
+    params:
+      plugin: default-backend
+      type: too-many
+    description:
+  varnish_backend_failure:
+    <<: *metrics_defaults
+    id: varnish-backend-failure
+    label: Varnish Backend Failure
+    query: collectd(varnish.connections)
+    expression: max
+    params:
+      plugin: default-backend
+      type: failures-
+    description:
+  varnish_backend_reuses:
+    <<: *metrics_defaults
+    id: varnish-backend-reuses
+    label: Varnish Backend Reuses
+    query: collectd(varnish.connections)
+    expression: max
+    params:
+      plugin: default-backend
+      type: reuses
+    description:
+  varnish_backend_was_closed:
+    <<: *metrics_defaults
+    id: varnish-backend-was-closed
+    label: Varnish Backend Was Closed
+    query: collectd(varnish.connections)
+    expression: max
+    params:
+      plugin: default-backend
+      type: was-closed
+    description:
+  varnish_backend_recycled:
+    <<: *metrics_defaults
+    id: varnish-backend-recycled
+    label: Varnish Backend Was Recycled
+    query: collectd(varnish.connections)
+    expression: max
+    params:
+      plugin: default-backend
+      type: recycled
+    description:
+  varnish_backend_unused:
+    <<: *metrics_defaults
+    id: varnish-backend-unused
+    label: Varnish Backend Unused
+    query: collectd(varnish.connections)
+    expression: max
+    params:
+      plugin: default-backend
+      type: unused
+    description:
+
+  varnish_shm_records:
+    <<: *metrics_defaults
+    id: varnish-shm-records
+    label: Varnish SHM Records
+    query: collectd(varnish.total_operations)
+    expression: max
+    params:
+      plugin: default-shm
+      type: records
+    description:
+  varnish_shm_writes:
+    <<: *metrics_defaults
+    id: varnish-shm-writes
+    label: Varnish SHM Writes
+    query: collectd(varnish.total_operations)
+    expression: max
+    params:
+      plugin: default-shm
+      type: writes
+    description:
+  varnish_shm_flushes:
+    <<: *metrics_defaults
+    id: varnish-shm-flushes
+    label: Varnish SHM Flushes
+    query: collectd(varnish.total_operations)
+    expression: max
+    params:
+      plugin: default-shm
+      type: flushes
+    description:
+  varnish_shm_contention:
+    <<: *metrics_defaults
+    id: varnish-shm-contention
+    label: Varnish SHM Contention
+    query: collectd(varnish.total_operations)
+    expression: max
+    params:
+      plugin: default-shm
+      type: contention
+    description:
+  varnish_shm_cycles:
+    <<: *metrics_defaults
+    id: varnish-shm-cycles
+    label: Varnish SHM Cycles
+    query: collectd(varnish.total_operations)
+    expression: max
+    params:
+      plugin: default-shm
+      type: cycles
+    description:
+
+  mysql_rx:
+    <<: *metrics_defaults
+    id: mysql-rx
+    label: MySQL Rx
+    query: collectd(mysql.mysql_octets.rx)
+    expression: max
+    params:
+      plugin: fr2_development
+    description:
+  mysql_tx:
+    <<: *metrics_defaults
+    id: mysql-tx
+    label: MySQL Tx
+    query: collectd(mysql.mysql_octets.tx)
+    expression: max
+    params:
+      plugin: fr2_development
+    description:
+
+  mysql_threads_cached:
+    <<: *metrics_defaults
+    id: mysql-threads-cached
+    label: MySQL Threads Cached
+    query: collectd(mysql.threads)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: cached
+    description:
+  mysql_threads_created:
+    <<: *metrics_defaults
+    id: mysql-threads-created
+    label: MySQL Threads Created
+    query: collectd(mysql.threads)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: created
+    description:
+  mysql_threads_connected:
+    <<: *metrics_defaults
+    id: mysql-threads-connected
+    label: MySQL Threads Connected
+    query: collectd(mysql.threads)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: connected
+    description:
+  mysql_threads_running:
+    <<: *metrics_defaults
+    id: mysql-threads-running
+    label: MySQL Threads Running
+    query: collectd(mysql.threads)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: running
+    description:
+  mysql_locks_waited:
+    <<: *metrics_defaults
+    id: mysql-locks-waited
+    label: MySQL Locks Waited
+    query: collectd(mysql.mysql_locks)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: waited
+    description:
+  mysql_locks_immediate:
+    <<: *metrics_defaults
+    id: mysql-threads-running
+    label: MySQL Locks Immediate
+    query: collectd(mysql.mysql_locks)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: immediate
+    description:
+
+  mysql_handler_write:
+    <<: *metrics_defaults
+    id: mysql-handler-write
+    label: MySQL Handler Write
+    query: collectd(mysql.mysql_handler)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: write
+    description:
+  mysql_handler_update:
+    <<: *metrics_defaults
+    id: mysql-handler-update
+    label: MySQL Handler Update
+    query: collectd(mysql.mysql_handler)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: update
+    description:
+  mysql_handler_rollback:
+    <<: *metrics_defaults
+    id: mysql-handler-rollback
+    label: MySQL Handler Rollback
+    query: collectd(mysql.mysql_handler)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: rollback
+    description:
+  mysql_handler_read_rnd:
+    <<: *metrics_defaults
+    id: mysql-handler-read-rnd
+    label: MySQL Handler Read Rnd
+    query: collectd(mysql.mysql_handler)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: read_rnd
+    description:
+  mysql_handler_read_rnd_next:
+    <<: *metrics_defaults
+    id: mysql-handler-read-rnd-next
+    label: MySQL Handler Read Rnd Next
+    query: collectd(mysql.mysql_handler)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: read_rnd_next
+    description:
+  mysql_handler_read_first:
+    <<: *metrics_defaults
+    id: mysql-handler-read-first
+    label: MySQL Handler Read First
+    query: collectd(mysql.mysql_handler)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: read_first
+    description:
+  mysql_handler_read_key:
+    <<: *metrics_defaults
+    id: mysql-handler-read-key
+    label: MySQL Handler Read Key
+    query: collectd(mysql.mysql_handler)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: read_key
+    description:
+  mysql_handler_read_next:
+    <<: *metrics_defaults
+    id: mysql-handler-read-next
+    label: MySQL Handler Read Next
+    query: collectd(mysql.mysql_handler)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: read_next
+    description:
+  mysql_handler_read_prev:
+    <<: *metrics_defaults
+    id: mysql-handler-read-prev
+    label: MySQL Handler Read Prev
+    query: collectd(mysql.mysql_handler)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: read_prev
+    description:
+
+  mysql_command_begin:
+    <<: *metrics_defaults
+    id: mysql-command-begin
+    label: MySQL Commands Begin
+    query: collectd(mysql.mysql_commands)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: begin
+    description:
+  mysql_command_commit:
+    <<: *metrics_defaults
+    id: mysql-command-commit
+    label: MySQL Commands Commit
+    query: collectd(mysql.mysql_commands)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: commit
+    description:
+  mysql_command_delete:
+    <<: *metrics_defaults
+    id: mysql-command-delete
+    label: MySQL Commands Delete
+    query: collectd(mysql.mysql_commands)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: delete
+    description:
+  mysql_command_flush:
+    <<: *metrics_defaults
+    id: mysql-command-flush
+    label: MySQL Commands Flush
+    query: collectd(mysql.mysql_commands)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: flush
+    description:
+  mysql_command_insert:
+    <<: *metrics_defaults
+    id: mysql-command-insert
+    label: MySQL Commands Insert
+    query: collectd(mysql.mysql_commands)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: insert
+    description:
+  mysql_command_rollback:
+    <<: *metrics_defaults
+    id: mysql-command-rollback
+    label: MySQL Commands Rollback
+    query: collectd(mysql.mysql_commands)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: rollback
+    description:
+  mysql_command_select:
+    <<: *metrics_defaults
+    id: mysql-command-select
+    label: MySQL Commands Select
+    query: collectd(mysql.mysql_commands)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: select
+    description:
+  mysql_command_update:
+    <<: *metrics_defaults
+    id: mysql-command-update
+    label: MySQL Commands Update
+    query: collectd(mysql.mysql_commands)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: update
+    description:
+  mysql_command_lock_tables:
+    <<: *metrics_defaults
+    id: mysql-command-lock-tables
+    label: MySQL Commands Lock Tables
+    query: collectd(mysql.mysql_commands)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: lock_tables
+    description:
+  mysql_command_unlock_tables:
+    <<: *metrics_defaults
+    id: mysql-command-unlock-tables
+    label: MySQL Commands Unlock Tables
+    query: collectd(mysql.mysql_commands)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: unlock_tables
+    description:
+  mysql_command_alter_table:
+    <<: *metrics_defaults
+    id: mysql-command-alter-table
+    label: MySQL Commands Alter Table
+    query: collectd(mysql.mysql_commands)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: alter_table
+    description:
+  mysql_command_show_fields:
+    <<: *metrics_defaults
+    id: mysql-command-show-fields
+    label: MySQL Commands Show Fields
+    query: collectd(mysql.mysql_commands)
+    expression: max
+    params:
+      plugin: fr2_development
+      type: show_fields
+    description:
 

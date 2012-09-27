@@ -7,16 +7,19 @@ def contruct_cube_metric_query(metric, fqdn)
 
   #query = ['cube.metric("']
   query = ["#{metric['expression']}(#{metric['query']}.eq(host,'#{fqdn}')"]
-  if metric['type']
-    query << ".eq(type,'#{metric['type']}')"
+
+  if metric['params']
+    metric['params'].each do |param|
+      query << ".eq(#{param[0]},'#{param[1]}')"
+    end
   end
   query << ')'
 
   query.join('')
 end
 
-def contruct_cube_metric_id(metric, fqdn)
-  fqdn.gsub('.', '-') + '-' + metric['id']
+def contruct_cube_metric_id(name, fqdn)
+  fqdn.gsub('.', '-') + '-' + name.gsub('_', '-')
 end
 
 metric_config = YAML.load_file( File.join('config', 'metrics.yml'))['metrics']
@@ -32,14 +35,14 @@ server_groups.each do |group_name, value|
   group_metrics = value['metrics'] + metrics_for_all
   hosts = value['hosts']
 
-  
-  group_metrics.each do |group_metric|
+  group_metrics.each do |metric|
     hosts.each do |host|
       metric_queries << [ 
-                          contruct_cube_metric_query(metric_config[group_metric], host),
-                          contruct_cube_metric_id(metric_config[group_metric], host),
+                          contruct_cube_metric_query(metric_config[metric], host),
+                          contruct_cube_metric_id(metric, host),
                           group_name,
-                          metric_config[group_metric]['label']
+                          metric_config[metric]['label'],
+                          host.gsub('-','_').gsub('.','_') + "_" + metric,
                         ]
     end
   end
@@ -60,6 +63,6 @@ cubism_servers = ERB.new(cubism_server_template).result(binding)
 dashboard_template = File.read( File.join('templates', 'layouts', 'dashboard.html.erb') )
 dashboard = ERB.new(dashboard_template).result(binding)
 
-File.open('test.html', 'w') do |f|
+File.open('dashboard.html', 'w') do |f|
   f.puts dashboard
 end

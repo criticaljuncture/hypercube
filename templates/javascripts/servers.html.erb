@@ -3,11 +3,16 @@
 
   var metrics = <%= metric_queries.to_json %>;
 
+  var assigned_metrics = {};
+
   $.each(metrics, function(index, metric) {
     var data = cube.metric( metric[0] ),
         id = metric[1],
         group = metric[2],
-        label = metric[3];
+        label = metric[3],
+        name = metric[4];
+
+    assigned_metrics[name] = data;
 
     d3.select("#" + id).call(function(div) {
       div.datum(data);

@@ -23,4 +23,13 @@
   var graph_colors = ["#08519c","#3182bd","#6baed6","#bdd7e7","#bae4b3","#74c476","#31a354","#006d2c"];
 
   add_axis(context);
+
+  $(document).ready( function() {
+    // adjust the line created above to account for the margin on the #main element
+    $('.rule .line').css('margin-left', $('#main').css('margin-left') );
+
+    $(window).resize(function() {
+      $('.rule .line').css('margin-left', $('#main').css('margin-left') );
+    });
+  });
 </script>
