@@ -1,0 +1,28 @@
+#servers:
+  #all:
+    #metrics: [memory_inactive, memory_wired, memory_active, memory_free, load_shortterm, load_midterm, load_longterm]
+  #proxy:
+    #metrics: [varnish_cache_hit, varnish_cache_miss, varnish_cache_hitpass]
+    #hosts: ['bob-burbachs-macbook-pro.local']
+:servers: 
+- :metrics: 
+  - memory_inactive
+  - memory_wired
+  - memory_active
+  - memory_free
+  - load_shortterm
+  - load_midterm
+  - load_longterm
+  :name: all
+- :metrics: 
+  - varnish_cache_hit
+  - varnish_cache_miss
+  - varnish_cache_hitpass
+  :hosts: 
+  - proxy.fr2.ec2.internal
+  :name: proxy
+- :metrics: []
+
+  :hosts: 
+  - database.fr2.ec2.internal
+  :name: database

@@ -1,12 +1,5 @@
 metrics_defaults: &defaults
   use_host: true
-  
-servers:
-  all:
-    metrics: [memory_inactive, memory_wired, memory_active, memory_free, load_shortterm, load_midterm, load_longterm]
-  proxy:
-    metrics: [varnish_cache_hit, varnish_cache_miss, varnish_cache_hitpass]
-    hosts: ['bob-burbachs-macbook-pro.local']
 
 metrics:
   # the following would create

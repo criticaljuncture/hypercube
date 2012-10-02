@@ -23,17 +23,18 @@ def contruct_cube_metric_id(name, fqdn)
 end
 
 metric_config = YAML.load_file( File.join('config', 'metrics.yml'))['metrics']
-server_groups = YAML.load_file( File.join('config', 'metrics.yml'))['servers']
+server_groups = YAML.load_file( File.join('config', 'servers.yml'))[:servers]
 
-metrics_for_all = server_groups['all']['metrics'].to_a
+metrics_for_all = server_groups.select{|sg| sg[:name] == 'all'}[0][:metrics]
 
 server_html = []
 metric_queries = []
-server_groups.each do |group_name, value|
-  next if group_name == 'all'
-  
-  group_metrics = value['metrics'] + metrics_for_all
-  hosts = value['hosts']
+server_groups.each do |server_group|
+  next if server_group[:name] == 'all'
+ 
+  group_name = server_group[:name]
+  group_metrics = server_group[:metrics] + metrics_for_all
+  hosts = server_group[:hosts]
 
   group_metrics.each do |metric|
     hosts.each do |host|
@@ -52,7 +53,11 @@ server_groups.each do |group_name, value|
 end
 
 server_hosts = {}
-server_groups.each{|name, value| next if name == 'all'; server_hosts[name] = value['hosts'] }
+server_groups.each do |server_group|
+  next if server_group[:name] == 'all'
+  server_hosts[server_group[:name]] = server_group[:hosts]
+end
+
 
 cubism_template =  File.read( File.join('templates', 'javascripts', 'cubism.html.erb') )
 cubism = ERB.new(cubism_template).result(binding)
