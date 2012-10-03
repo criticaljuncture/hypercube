@@ -24,18 +24,18 @@ def contruct_cube_metric_id(name, fqdn)
 end
 
 metric_config = YAML.load_file( File.join('config', 'metrics.yml'))['metrics']
-server_groups = YAML.load_file( File.join('config', 'servers.yml'))[:servers]
+server_groups = JSON.parse( File.read(File.join('config', 'servers.json')) )["servers"]
 
-metrics_for_all = server_groups.select{|sg| sg[:name] == 'all'}[0][:metrics]
+metrics_for_all = server_groups.select{|sg| sg["name"] == 'all'}[0]["metrics"]
 
 server_html = []
 metric_queries = []
 server_groups.each do |server_group|
-  next if server_group[:name] == 'all'
+  next if server_group["name"] == 'all'
  
-  group_name = server_group[:name]
-  group_metrics = server_group[:metrics] + metrics_for_all
-  hosts = server_group[:hosts]
+  group_name = server_group["name"]
+  group_metrics = server_group["metrics"] + metrics_for_all
+  hosts = server_group["hosts"]
 
   group_metrics.each do |metric|
     hosts.each do |host|
@@ -55,8 +55,8 @@ end
 
 server_hosts = {}
 server_groups.each do |server_group|
-  next if server_group[:name] == 'all'
-  server_hosts[server_group[:name]] = server_group[:hosts]
+  next if server_group["name"] == 'all'
+  server_hosts[server_group["name"]] = server_group["hosts"]
 end
 
 

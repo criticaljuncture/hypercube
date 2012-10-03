@@ -1,0 +1,1 @@
+{"servers":[{"name":"all","metrics":["memory_inactive","memory_wired","memory_active","memory_free","load_shortterm","load_midterm","load_longterm"]},{"name":"proxy","hosts":["proxy.fr2.ec2.internal"],"metrics":["varnish_cache_hit","varnish_cache_miss","varnish_cache_hitpass"]},{"name":"database","hosts":["database.fr2.ec2.internal"],"metrics":[]}]}
